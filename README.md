@@ -43,7 +43,7 @@ const response = await fetch('https://example.com', { retry })
 // If the first attempt fails then: waits 3s and retries, 6s, 9s, 12s, 15s and finally throws
 ```
 
-Check ![like-retry](https://github.com/LuKks/like-retry) for documentation about `retry` option.
+Check [like-retry](https://github.com/LuKks/like-retry) for documentation about `retry` option.
 
 ## Status validation
 ```javascript

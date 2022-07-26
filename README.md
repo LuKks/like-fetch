@@ -10,7 +10,7 @@ npm i like-fetch
 
 All options are optional, so by default it's the same as a normal `fetch(...)`.
 
-Note: there is still work in progress.
+Note: this is still work in progress.
 
 ## Usage
 ```javascript

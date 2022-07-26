@@ -70,6 +70,7 @@ function request (url, options = {}) {
 
 function handleProxyAgent (opts, proxy) {
   if (!proxy) return
+  if (opts.agent) throw new Error('Conflict having both opts.proxy and opts.agent, only one allowed')
 
   // + add support for passing an object { host, port, auth: { username, password } }
   // + add support for socks5
@@ -107,12 +108,15 @@ function handleResponseTypes (opts, responseType) {
 }
 
 function handleAbortController (opts) {
+  if (opts.signal) return { controller: null, signal: opts.signal }
+
   const controller = new AbortController()
   return { controller, signal: controller.signal }
 }
 
 function handleTimeout (opts, timeout, controller) {
   if (timeout === undefined || timeout === 0) return
+  if (opts.signal) throw new Error('Conflict having both opts.timeout and opts.signal, only one allowed')
 
   const timeoutId = setTimeout(() => controller.abort(), timeout)
   if (timeoutId.unref) timeoutId.unref()

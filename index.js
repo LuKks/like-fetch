@@ -29,35 +29,14 @@ function request (url, options = {}) {
   const requestType = remove(opts, 'requestType')
   const responseType = remove(opts, 'responseType')
 
-  let agent
-  if (proxy) {
-    // + add support for passing an object { host, port, auth: { username, password } }
-    // + add support for socks5
-    const HttpsProxyAgent = require('https-proxy-agent')
-    agent = new HttpsProxyAgent(proxy)
-  }
+  const agent = handleProxyAgent(opts, proxy)
+  handleRequestTypes(opts, requestType)
+  handleResponseTypes(opts, responseType)
 
-  if (!opts.headers) opts.headers = {}
+  const { controller, signal } = handleAbortController(opts)
+  const timeoutId = handleTimeout(opts, timeout, controller)
 
-  if (requestType === 'json') {
-    if (!opts.headers['content-type']) opts.headers['content-type'] = 'application/json'
-    if (opts.body !== undefined) opts.body = JSON.stringify(opts.body)
-  }
-
-  if (responseType === 'json') {
-    if (!opts.headers.accept) opts.headers.accept = 'application/json'
-  }
-
-  const controller = new AbortController()
-
-  let timeoutId
-  if (timeout !== undefined && timeout !== 0) {
-    timeoutId = setTimeout(() => controller.abort(), timeout)
-    if (timeoutId.unref) timeoutId.unref()
-    controller.signal.addEventListener('abort', () => clearTimeout(timeoutId), { once: true })
-  }
-
-  // + this promise + controller allows easy usage in React (useEffect, etc)
+  // + this promise + signal allows easy usage in React (useEffect, etc)
   // + should move retry inside request()->callback(), or do something to expose this promise directly
   const promise = new Promise(callback)
   promise.controller = controller
@@ -66,32 +45,12 @@ function request (url, options = {}) {
 
   async function callback (resolve, reject) {
     try {
-      const response = await cfetch(url, {
-        signal: controller.signal,
-        agent,
-        ...opts
-      })
+      const response = await cfetch(url, { signal, agent, ...opts })
 
-      if (validateStatus) {
-        // + should throw custom error like AxiosError
+      handleValidateStatus(response, validateStatus)
 
-        if (typeof validateStatus === 'number') {
-          if (validateStatus !== response.status) throw response
-        } else if (typeof validateStatus === 'function') {
-          if (!validateStatus(response.status)) throw response
-        } else if (validateStatus === 'ok') {
-          if (!response.ok) throw response
-        } else {
-          throw new Error('validateStatus not supported (' + validateStatus + ')')
-        }
-      }
-
-      if (responseType === 'json') {
-        const body = await response.json()
-        clearTimeout(timeoutId)
-        resolve(body)
-      } else if (responseType === 'text') {
-        const body = await response.text()
+      if (responseType === 'json' || responseType === 'text') {
+        const body = await response[responseType]()
         clearTimeout(timeoutId)
         resolve(body)
       } else {
@@ -106,6 +65,73 @@ function request (url, options = {}) {
 
       reject(error)
     }
+  }
+}
+
+function handleProxyAgent (opts, proxy) {
+  if (!proxy) return
+
+  // + add support for passing an object { host, port, auth: { username, password } }
+  // + add support for socks5
+  const HttpsProxyAgent = require('https-proxy-agent')
+  const agent = new HttpsProxyAgent(proxy)
+
+  return agent
+}
+
+function handleRequestTypes (opts, requestType) {
+  if (!requestType) return
+  if (!opts.headers) opts.headers = {}
+
+  if (requestType === 'json') {
+    if (!opts.headers['content-type']) opts.headers['content-type'] = 'application/json'
+    if (opts.body !== undefined) opts.body = JSON.stringify(opts.body)
+    return
+  }
+
+  throw new Error('requestType not supported (' + requestType + ')')
+}
+
+function handleResponseTypes (opts, responseType) {
+  if (!responseType) return
+  if (!opts.headers) opts.headers = {}
+
+  if (responseType === 'json') {
+    if (!opts.headers.accept) opts.headers.accept = 'application/json'
+    return
+  } else if (responseType === 'text') {
+    return
+  }
+
+  throw new Error('responseType not supported (' + responseType + ')')
+}
+
+function handleAbortController (opts) {
+  const controller = new AbortController()
+  return { controller, signal: controller.signal }
+}
+
+function handleTimeout (opts, timeout, controller) {
+  if (timeout === undefined || timeout === 0) return
+
+  const timeoutId = setTimeout(() => controller.abort(), timeout)
+  if (timeoutId.unref) timeoutId.unref()
+  controller.signal.addEventListener('abort', () => clearTimeout(timeoutId), { once: true })
+  return timeoutId
+}
+
+function handleValidateStatus (response, validateStatus) {
+  if (!validateStatus) return
+
+  // + should throw custom error like AxiosError
+  if (typeof validateStatus === 'number') {
+    if (validateStatus !== response.status) throw response
+  } else if (typeof validateStatus === 'function') {
+    if (!validateStatus(response.status)) throw response
+  } else if (validateStatus === 'ok') {
+    if (!response.ok) throw response
+  } else {
+    throw new Error('validateStatus not supported (' + validateStatus + ')')
   }
 }
 

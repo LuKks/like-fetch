@@ -10,6 +10,8 @@ npm i like-fetch
 
 All options are optional, so by default it's the same as a normal `fetch(...)`.
 
+Note: there is still work in progress.
+
 ## Usage
 ```javascript
 const fetch = require('like-fetch')

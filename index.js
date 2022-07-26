@@ -101,7 +101,7 @@ function request (url, options = {}) {
       // error.name => 'AbortError', error.message => 'The user aborted a request.'
 
       // + should not clear/abort if it's from validateStatus
-      clearTimeout(timeoutId)
+      // clearTimeout(timeoutId)
       // controller.abort()
 
       reject(error)

@@ -102,7 +102,7 @@ function request (url, options = {}) {
 
       // + should not clear/abort if it's from validateStatus
       clearTimeout(timeoutId)
-      controller.abort()
+      // controller.abort()
 
       reject(error)
     }

@@ -1,0 +1,30 @@
+{
+  "name": "like-fetch",
+  "version": "0.1.0",
+  "description": "Fetch with added features: timeout, retry, proxy, status validation, simplified response, etc",
+  "main": "index.js",
+  "scripts": {
+    "test": "standard && tape test.js",
+    "tape": "tape test.js",
+    "lint": "standard"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LuKks/like-fetch.git"
+  },
+  "author": "Lucas Barrena (@LuKks)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/LuKks/like-fetch/issues"
+  },
+  "homepage": "https://github.com/LuKks/like-fetch",
+  "dependencies": {
+    "cross-fetch": "^3.1.5",
+    "https-proxy-agent": "^5.0.1",
+    "like-retry": "^1.0.2"
+  },
+  "devDependencies": {
+    "standard": "^17.0.0",
+    "tape": "^5.5.3"
+  }
+}

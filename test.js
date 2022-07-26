@@ -1,0 +1,158 @@
+const tape = require('tape')
+const fetch = require('./')
+const net = require('net')
+
+tape('basic', async function (t) {
+  const response = await fetch('https://checkip.amazonaws.com')
+  const body = await response.text()
+
+  const ip = body.trim()
+  t.ok(net.isIP(ip))
+})
+
+tape('timeout response', async function (t) {
+  try {
+    await fetch('https://checkip.amazonaws.com', { timeout: 1 })
+    t.ok(false, 'Should have given error')
+  } catch (error) {
+    t.is(error.name, 'AbortError')
+  }
+})
+
+tape('timeout body', async function (t) {
+  try {
+    const response = await fetch('https://http.cat/401', { timeout: 3000 })
+    await sleep(3000)
+    await response.blob()
+    t.ok(false, 'Should have given error')
+  } catch (error) {
+    t.is(error.name, 'AbortError')
+  }
+})
+
+tape('retry', async function (t) {
+  const started = Date.now()
+
+  try {
+    const retry = { max: 3, delay: 1000, strategy: 'linear' }
+    await fetch('https://checkip.amazonaws.com', { timeout: 1, retry })
+    t.ok(false, 'Should have given error')
+  } catch (error) {
+    t.is(error.name, 'AbortError')
+  }
+
+  t.ok(isAround(Date.now() - started, 6000))
+})
+
+tape('status validation', async function (t) {
+  try {
+    await fetch('https://checkip.amazonaws.com', { validateStatus: 404 })
+    t.ok(false, 'Should have given error')
+  } catch (error) {
+    t.is(error.constructor.name, 'Response')
+  }
+
+  try {
+    await fetch('https://api.agify.io/not-found', { validateStatus: 'ok' })
+    t.ok(false, 'Should have given error')
+  } catch (error) {
+    t.is(error.constructor.name, 'Response')
+  }
+
+  try {
+    const validateStatus = status => status === 200
+    const response = await fetch('https://checkip.amazonaws.com', { validateStatus })
+    const body = await response.text()
+    const ip = body.trim()
+    t.ok(net.isIP(ip))
+  } catch (error) {
+    t.ok(false, 'Should not have given error')
+  }
+
+  try {
+    const validateStatus = status => status !== 200
+    await fetch('https://checkip.amazonaws.com', { validateStatus })
+    t.ok(false, 'Should have given error')
+  } catch (error) {
+    t.is(error.constructor.name, 'Response')
+  }
+})
+
+/* tape('proxy', async function (t) {
+  if (!process.env.PROXY_URL) {
+    console.error('You have to pass the ENV variables like this:')
+    console.error('PROXY_URL="http://user:pass@example.com:3128" npm run test')
+    t.ok(false, 'Could not do proxy tests due auth missing')
+    return
+  }
+
+  const body = await fetch('https://checkip.amazonaws.com', { validateStatus: 200, responseType: 'text' })
+  const ip = body.trim()
+  t.ok(net.isIP(ip))
+
+  try {
+    const body2 = await fetch('https://checkip.amazonaws.com', { proxy: process.env.PROXY_URL, validateStatus: 200, responseType: 'text' })
+    const proxyIP = body2.trim()
+    t.ok(net.isIP(proxyIP))
+    t.notEqual(ip, proxyIP)
+  } catch (error) {
+    t.ok(false, 'Should not have given error')
+  }
+}) */
+
+tape('request types', async function (t) {
+  const response = await fetch('http://api.shoutcloud.io/V1/SHOUT', { method: 'POST', requestType: 'json', body: { input: 'lucas' } })
+  const body = await response.json()
+  t.is(body.OUTPUT, 'LUCAS')
+})
+
+tape('response types', async function (t) {
+  const body1 = await fetch('https://api.agify.io/?name=lucas', { responseType: 'json' })
+  t.is(typeof body1, 'object')
+  t.is(body1.name, 'lucas')
+
+  const body2 = await fetch('https://api.agify.io/?name=lucas', { responseType: 'text' })
+  t.is(typeof body2, 'string')
+  t.ok(body2.indexOf('{"name":"lucas"') === 0)
+})
+
+/* tape('signal', async function (t) {
+  try {
+    const promise = fetch('https://checkip.amazonaws.com')
+    promise.controller.abort()
+    await promise
+  } catch (error) {
+    t.is(error.name, 'AbortError')
+  }
+}) */
+
+/* README
+## Signal
+Just using `useEffect` as an example of manual aborting.
+
+```javascript
+useEffect(() => {
+  if (!account) return
+
+  // Start request
+  const promise = fetch('https://example.com/api/balance/' + account, { responseType: 'json' })
+
+  // Propagate values
+  promise.then(body => setBalance(body.balance))
+
+  // Handle exceptions
+  promise.catch(error => setBalance('~'))
+
+  // clean up
+  return () => promise.controller.abort()
+}, [account])
+``` */
+
+function isAround (delay, real, precision = 150) {
+  const diff = Math.abs(delay - real)
+  return diff <= precision
+}
+
+function sleep (ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}

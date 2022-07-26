@@ -1,4 +1,4 @@
-# like-retry
+# like-fetch
 
 Fetch with added features: timeout, retry, proxy, status validation, simplified response, etc.
 

@@ -98,7 +98,7 @@ tape('controller manual abort should ignore retry', async function (t) {
   const started = Date.now()
 
   try {
-    const promise = fetch('https://checkip.amazonaws.com', { retry: { max: 3, delay: 1000 }})
+    const promise = fetch('https://checkip.amazonaws.com', { retry: { max: 3, delay: 1000 } })
     promise.controller.abort()
     await promise
     t.ok(false, 'Should have given error')
@@ -116,7 +116,7 @@ tape('controller (wrong usage of controller)', async function (t) {
   let controller = null
   try {
     // with timeout at 1 (one) we make it fail and just one retry is enough to change the "promise.controller"
-    promise = fetch('https://checkip.amazonaws.com', { timeout: 1, retry: { max: 1 }})
+    promise = fetch('https://checkip.amazonaws.com', { timeout: 1, retry: { max: 1 } })
     controller = promise.controller
     await promise
     t.ok(false, 'Should have given error')

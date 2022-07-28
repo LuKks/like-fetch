@@ -80,7 +80,7 @@ function fetch (url, options = {}) {
 
 // "https-proxy-agent" is for Node.js but obviously you won't use fetch() with the proxy option in the browser
 // ie. React analyzes all the "require"s even if the code doesn't reach there, and in this case crashes due Node dependencies
-// so disabling this for now 
+// so disabling this for now
 /* function handleProxyAgent (opts, proxy) {
   if (!proxy) return
   if (opts.agent) throw new Error('Conflict having both opts.proxy and opts.agent, only one allowed')

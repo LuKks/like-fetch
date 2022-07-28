@@ -76,5 +76,45 @@ const body = await fetch('https://example.com', { responseType: 'text' })
 console.log(body) // => String '...'
 ```
 
+## Signal controller
+Just using `useEffect` as an example of manual cancelling the request.
+
+```javascript
+useEffect(() => {
+  if (!account) return
+
+  // Start request
+  const promise = fetch('https://example.com/api/balance/' + account, { responseType: 'json' })
+
+  // Propagate values
+  promise.then(body => setBalance(body.balance))
+
+  // Handle exceptions
+  promise.catch(error => setBalance('~'))
+
+  // Clean up
+  return () => promise.controller.abort()
+}, [account])
+```
+
+## Caution with controller
+Don't do this with the `controller` variable and `retry` option:
+
+```javascript
+useEffect(() => {
+  const promise = fetch(..., { retry: { max: 3 } })
+  const controller = promise.controller // DON'T
+  // ...
+  return () => controller.abort()
+}, [])
+```
+
+This also applies outside of React:
+The `promise.controller` property will change on every retry.\
+That's because signals can't be reused.\
+If you don't use the `retry` option then that case is okay.\
+Still a bad practice as it's easy to fall in that bug.\
+So avoid isolating the controller, check the first `useEffect` example again.\
+
 ## License
 MIT

@@ -78,28 +78,6 @@ tape('status validation', async function (t) {
   }
 })
 
-/* tape('proxy', async function (t) {
-  if (!process.env.PROXY_URL) {
-    console.error('You have to pass the ENV variables like this:')
-    console.error('PROXY_URL="http://user:pass@example.com:3128" npm run test')
-    t.ok(false, 'Could not do proxy tests due auth missing')
-    return
-  }
-
-  const body = await fetch('https://checkip.amazonaws.com', { validateStatus: 200, responseType: 'text' })
-  const ip = body.trim()
-  t.ok(net.isIP(ip))
-
-  try {
-    const body2 = await fetch('https://checkip.amazonaws.com', { proxy: process.env.PROXY_URL, validateStatus: 200, responseType: 'text' })
-    const proxyIP = body2.trim()
-    t.ok(net.isIP(proxyIP))
-    t.notEqual(ip, proxyIP)
-  } catch (error) {
-    t.ok(false, 'Should not have given error')
-  }
-}) */
-
 tape('request types', async function (t) {
   const response = await fetch('http://api.shoutcloud.io/V1/SHOUT', { method: 'POST', requestType: 'json', body: { input: 'lucas' } })
   const body = await response.json()
@@ -116,37 +94,40 @@ tape('response types', async function (t) {
   t.ok(body2.indexOf('{"name":"lucas"') === 0)
 })
 
-/* tape('signal', async function (t) {
+tape('controller manual abort should ignore retry', async function (t) {
+  const started = Date.now()
+
   try {
-    const promise = fetch('https://checkip.amazonaws.com')
+    const promise = fetch('https://checkip.amazonaws.com', { retry: { max: 3, delay: 1000 } })
     promise.controller.abort()
     await promise
+    t.ok(false, 'Should have given error')
   } catch (error) {
     t.is(error.name, 'AbortError')
   }
-}) */
 
-/* README
-## Signal
-Just using `useEffect` as an example of manual aborting.
+  t.ok(isAround(Date.now() - started, 0))
+})
 
-```javascript
-useEffect(() => {
-  if (!account) return
+tape('controller (wrong usage of controller)', async function (t) {
+  const started = Date.now()
 
-  // Start request
-  const promise = fetch('https://example.com/api/balance/' + account, { responseType: 'json' })
+  let promise = null
+  let controller = null
+  try {
+    // with timeout at 1 (one) we make it fail and just one retry is enough to change the "promise.controller"
+    promise = fetch('https://checkip.amazonaws.com', { timeout: 1, retry: { max: 1 } })
+    controller = promise.controller
+    await promise
+    t.ok(false, 'Should have given error')
+  } catch (error) {
+    t.is(error.name, 'AbortError')
+    t.ok(controller !== null)
+    t.ok(promise.controller !== controller) // controller changed!
+  }
 
-  // Propagate values
-  promise.then(body => setBalance(body.balance))
-
-  // Handle exceptions
-  promise.catch(error => setBalance('~'))
-
-  // clean up
-  return () => promise.controller.abort()
-}, [account])
-``` */
+  t.ok(isAround(Date.now() - started, 0))
+})
 
 function isAround (delay, real, precision = 150) {
   const diff = Math.abs(delay - real)

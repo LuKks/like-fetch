@@ -78,28 +78,6 @@ tape('status validation', async function (t) {
   }
 })
 
-/* tape('proxy', async function (t) {
-  if (!process.env.PROXY_URL) {
-    console.error('You have to pass the ENV variables like this:')
-    console.error('PROXY_URL="http://user:pass@example.com:3128" npm run test')
-    t.ok(false, 'Could not do proxy tests due auth missing')
-    return
-  }
-
-  const body = await fetch('https://checkip.amazonaws.com', { validateStatus: 200, responseType: 'text' })
-  const ip = body.trim()
-  t.ok(net.isIP(ip))
-
-  try {
-    const body2 = await fetch('https://checkip.amazonaws.com', { proxy: process.env.PROXY_URL, validateStatus: 200, responseType: 'text' })
-    const proxyIP = body2.trim()
-    t.ok(net.isIP(proxyIP))
-    t.notEqual(ip, proxyIP)
-  } catch (error) {
-    t.ok(false, 'Should not have given error')
-  }
-}) */
-
 tape('request types', async function (t) {
   const response = await fetch('http://api.shoutcloud.io/V1/SHOUT', { method: 'POST', requestType: 'json', body: { input: 'lucas' } })
   const body = await response.json()

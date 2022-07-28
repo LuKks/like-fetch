@@ -8,11 +8,11 @@ function fetch (url, options = {}) {
   const retryOptions = remove(opts, 'retry')
   const timeout = remove(opts, 'timeout')
   const validateStatus = remove(opts, 'validateStatus')
-  const proxy = remove(opts, 'proxy')
+  // const proxy = remove(opts, 'proxy')
   const requestType = remove(opts, 'requestType')
   const responseType = remove(opts, 'responseType')
 
-  const agent = handleProxyAgent(opts, proxy)
+  // const agent = handleProxyAgent(opts, proxy)
   handleRequestTypes(opts, requestType)
   handleResponseTypes(opts, responseType)
 
@@ -35,7 +35,7 @@ function fetch (url, options = {}) {
 
     for await (const backoff of retry(retryOptions)) {
       try {
-        const response = await cfetch(url, { signal: abortController.signal, agent, ...opts })
+        const response = await cfetch(url, { signal: abortController.signal/* , agent */, ...opts })
 
         handleValidateStatus(response, validateStatus)
 
@@ -78,7 +78,10 @@ function fetch (url, options = {}) {
   }
 }
 
-function handleProxyAgent (opts, proxy) {
+// "https-proxy-agent" is for Node.js but obviously you won't use fetch() with the proxy option in the browser
+// ie. React analyzes all the "require"s even if the code doesn't reach there, and in this case crashes due Node dependencies
+// so disabling this for now 
+/* function handleProxyAgent (opts, proxy) {
   if (!proxy) return
   if (opts.agent) throw new Error('Conflict having both opts.proxy and opts.agent, only one allowed')
 
@@ -88,7 +91,7 @@ function handleProxyAgent (opts, proxy) {
   const agent = new HttpsProxyAgent(proxy)
 
   return agent
-}
+} */
 
 function handleRequestTypes (opts, requestType) {
   if (!requestType) return

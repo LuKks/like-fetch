@@ -109,7 +109,7 @@ useEffect(() => {
 }, [])
 ```
 
-This also applies outside of React:
+This also applies outside of React:\
 The `promise.controller` property will change on every retry.\
 That's because signals can't be reused.\
 If you don't use the `retry` option then that case is okay.\

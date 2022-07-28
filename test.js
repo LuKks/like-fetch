@@ -116,37 +116,40 @@ tape('response types', async function (t) {
   t.ok(body2.indexOf('{"name":"lucas"') === 0)
 })
 
-/* tape('signal', async function (t) {
+tape('controller manual abort should ignore retry', async function (t) {
+  const started = Date.now()
+
   try {
-    const promise = fetch('https://checkip.amazonaws.com')
+    const promise = fetch('https://checkip.amazonaws.com', { retry: { max: 3, delay: 1000 }})
     promise.controller.abort()
     await promise
+    t.ok(false, 'Should have given error')
   } catch (error) {
     t.is(error.name, 'AbortError')
   }
-}) */
 
-/* README
-## Signal
-Just using `useEffect` as an example of manual aborting.
+  t.ok(isAround(Date.now() - started, 0))
+})
 
-```javascript
-useEffect(() => {
-  if (!account) return
+tape('controller (wrong usage of controller)', async function (t) {
+  const started = Date.now()
 
-  // Start request
-  const promise = fetch('https://example.com/api/balance/' + account, { responseType: 'json' })
+  let promise = null
+  let controller = null
+  try {
+    // with timeout at 1 (one) we make it fail and just one retry is enough to change the "promise.controller"
+    promise = fetch('https://checkip.amazonaws.com', { timeout: 1, retry: { max: 1 }})
+    controller = promise.controller
+    await promise
+    t.ok(false, 'Should have given error')
+  } catch (error) {
+    t.is(error.name, 'AbortError')
+    t.ok(controller !== null)
+    t.ok(promise.controller !== controller) // controller changed!
+  }
 
-  // Propagate values
-  promise.then(body => setBalance(body.balance))
-
-  // Handle exceptions
-  promise.catch(error => setBalance('~'))
-
-  // clean up
-  return () => promise.controller.abort()
-}, [account])
-``` */
+  t.ok(isAround(Date.now() - started, 0))
+})
 
 function isAround (delay, real, precision = 150) {
   const diff = Math.abs(delay - real)

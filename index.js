@@ -3,26 +3,9 @@ const retry = require('like-retry')
 
 module.exports = fetch
 
-async function fetch (url, options = {}) {
+function fetch (url, options = {}) {
   const opts = Object.assign({}, options)
   const retryOptions = remove(opts, 'retry')
-  // if (!retryOptions) return request(url, opts)
-
-  for await (const backoff of retry(retryOptions)) {
-    const promise = request(url, opts)
-    try {
-      return await promise
-    } catch (error) {
-      // + should clear if there is backoffs left
-      // clearTimeout(promise.timeoutId)
-      // promise.controller.abort()
-      await backoff(error)
-    }
-  }
-}
-
-function request (url, options = {}) {
-  const opts = Object.assign({}, options)
   const timeout = remove(opts, 'timeout')
   const validateStatus = remove(opts, 'validateStatus')
   const proxy = remove(opts, 'proxy')
@@ -33,37 +16,64 @@ function request (url, options = {}) {
   handleRequestTypes(opts, requestType)
   handleResponseTypes(opts, responseType)
 
-  const { controller, signal } = handleAbortController(opts)
-  const timeoutId = handleTimeout(opts, timeout, controller)
+  let abortController = null
+  let timeoutId = null
 
-  // + this promise + signal allows easy usage in React (useEffect, etc)
-  // + should move retry inside request()->callback(), or do something to expose this promise directly
   const promise = new Promise(callback)
-  promise.controller = controller
+
+  // by now they're not null:
+  promise.controller = abortController.controller
   promise.timeoutId = timeoutId
+
   return promise
 
+  // + this function is not as clean as I like and there is too much going on but it's difficult due:
+  // doing yielded retries, exposing properly the controller for React and wanting make it work for all use cases
   async function callback (resolve, reject) {
-    try {
-      const response = await cfetch(url, { signal, agent, ...opts })
+    abortController = handleAbortController(opts)
+    timeoutId = handleTimeout(opts, timeout, abortController.controller)
 
-      handleValidateStatus(response, validateStatus)
+    for await (const backoff of retry(retryOptions)) {
+      try {
+        const response = await cfetch(url, { signal: abortController.signal, agent, ...opts })
 
-      if (responseType === 'json' || responseType === 'text') {
-        const body = await response[responseType]()
-        clearTimeout(timeoutId)
-        resolve(body)
-      } else {
-        resolve(response)
+        handleValidateStatus(response, validateStatus)
+
+        if (responseType === 'json' || responseType === 'text') {
+          const body = await response[responseType]()
+          clearTimeout(promise.timeoutId)
+          resolve(body)
+        } else {
+          resolve(response)
+        }
+      } catch (error) {
+        // manual abort like at React useEffect cleanup, so it must not retry
+        if (error.name === 'AbortError' && !promise.controller.$timedout) {
+          reject(error)
+          return
+        }
+
+        // error.name => 'AbortError', error.message => 'The user aborted a request.'
+        // + should not clear/abort if it's from validateStatus?
+
+        if (backoff.left > 0) {
+          clearTimeout(promise.timeoutId)
+          if (promise.controller) {
+            promise.controller.abort()
+          }
+        }
+
+        try {
+          await backoff(error)
+        } catch (err) {
+          reject(err)
+          return
+        }
+
+        abortController = handleAbortController(opts)
+        promise.controller = abortController.controller
+        promise.timeoutId = handleTimeout(opts, timeout, abortController.controller)
       }
-    } catch (error) {
-      // error.name => 'AbortError', error.message => 'The user aborted a request.'
-
-      // + should not clear/abort if it's from validateStatus
-      // clearTimeout(timeoutId)
-      // controller.abort()
-
-      reject(error)
     }
   }
 }
@@ -108,7 +118,16 @@ function handleResponseTypes (opts, responseType) {
 }
 
 function handleAbortController (opts) {
-  if (opts.signal) return { controller: null, signal: opts.signal }
+  // signals can't be reused, so if the user passed in one then it won't be used again
+  const controllerOpt = remove(opts, 'controller')
+  const signalOpt = remove(opts, 'signal')
+
+  if (signalOpt) {
+    if (controllerOpt && controllerOpt.signal !== signalOpt) {
+      throw new Error('If you pass your own controller and signal, they have to be the same (opts.controller.signal === opts.signal)')
+    }
+    return { controller: controllerOpt || null, signal: signalOpt }
+  }
 
   const controller = new AbortController()
   return { controller, signal: controller.signal }
@@ -118,7 +137,10 @@ function handleTimeout (opts, timeout, controller) {
   if (timeout === undefined || timeout === 0) return
   if (opts.signal) throw new Error('Conflict having both opts.timeout and opts.signal, only one allowed')
 
-  const timeoutId = setTimeout(() => controller.abort(), timeout)
+  const timeoutId = setTimeout(() => {
+    controller.$timedout = true
+    controller.abort()
+  }, timeout)
   if (timeoutId.unref) timeoutId.unref()
   controller.signal.addEventListener('abort', () => clearTimeout(timeoutId), { once: true })
   return timeoutId

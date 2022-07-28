@@ -114,7 +114,7 @@ The `promise.controller` property will change on every retry.\
 That's because signals can't be reused.\
 If you don't use the `retry` option then that case is okay.\
 Still a bad practice as it's easy to fall in that bug.\
-So avoid isolating the controller, check the first `useEffect` example again.\
+So avoid isolating the controller, check the first `useEffect` example again.
 
 ## License
 MIT

@@ -8,7 +8,7 @@ Fetch with added features: timeout, retry, status validation, simplified respons
 npm i like-fetch
 ```
 
-Compatible with Node.js and browser.\
+Compatible with Node.js, browser and React Native.\
 All options are optional, so by default it's the same as a normal `fetch(...)`.
 
 ## Usage

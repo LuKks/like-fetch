@@ -58,11 +58,6 @@ const response = await fetch('https://example.com', { validateStatus })
 
 At this moment, when `validateStatus` fails it throws the `response` object.
 
-## Proxy
-```javascript
-const response = await fetch('https://example.com', { proxy: 'http://user:pass@proxy.com:8080' })
-```
-
 ## Request types
 ```javascript
 // Sets the 'Content-Type' header to 'application/json'

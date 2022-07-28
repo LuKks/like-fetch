@@ -109,7 +109,7 @@ tape('controller manual abort should ignore retry', async function (t) {
   t.ok(isAround(Date.now() - started, 0))
 })
 
-tape('wrong usage of controller', async function (t) {
+tape('controller changes at every retry', async function (t) {
   const started = Date.now()
 
   // with timeout at 1 (one) we make it fail and just one retry is enough to change the "promise.controller"

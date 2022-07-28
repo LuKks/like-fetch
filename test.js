@@ -112,18 +112,81 @@ tape('controller manual abort should ignore retry', async function (t) {
 tape('controller (wrong usage of controller)', async function (t) {
   const started = Date.now()
 
-  let promise = null
-  let controller = null
+  // with timeout at 1 (one) we make it fail and just one retry is enough to change the "promise.controller"
+  const promise = fetch('https://checkip.amazonaws.com', { timeout: 1, retry: { max: 1 } })
+  const controller = promise.controller
+
   try {
-    // with timeout at 1 (one) we make it fail and just one retry is enough to change the "promise.controller"
-    promise = fetch('https://checkip.amazonaws.com', { timeout: 1, retry: { max: 1 } })
-    controller = promise.controller
     await promise
     t.ok(false, 'Should have given error')
   } catch (error) {
     t.is(error.name, 'AbortError')
     t.ok(controller !== null)
     t.ok(promise.controller !== controller) // controller changed!
+  }
+
+  t.ok(isAround(Date.now() - started, 0))
+})
+
+tape('can not have timeout + custom signal without controller', async function (t) {
+  const started = Date.now()
+
+  const controller = new AbortController()
+  try {
+    await fetch('https://checkip.amazonaws.com', { timeout: 1, signal: controller.signal })
+    t.ok(false, 'Should have given error')
+  } catch (error) {
+    t.ok(error.message.indexOf('Conflict having both opts.timeout and opts.signal') === 0)
+  }
+
+  t.ok(isAround(Date.now() - started, 0))
+})
+
+tape('timeout + custom signal with controller should be ok', async function (t) {
+  const started = Date.now()
+
+  const controller = new AbortController()
+  const promise = fetch('https://checkip.amazonaws.com', { timeout: 1, retry: { max: 1 }, controller, signal: controller.signal })
+
+  let previousController = null
+  try {
+    t.is(promise.controller, controller)
+    t.is(promise.controller.signal, controller.signal)
+
+    // atm still the current controller
+    previousController = promise.controller
+
+    await promise
+    t.ok(false, 'Should have given error')
+  } catch (error) {
+    t.is(error.name, 'AbortError')
+    t.ok(previousController !== null)
+    t.ok(promise.controller !== previousController)
+  }
+
+  t.ok(isAround(Date.now() - started, 0))
+})
+
+tape('timeout + custom controller without passing signal should be ok', async function (t) {
+  const started = Date.now()
+
+  const controller = new AbortController()
+  const promise = fetch('https://checkip.amazonaws.com', { timeout: 1, retry: { max: 1 }, controller })
+
+  let previousController = null
+  try {
+    t.is(promise.controller, controller)
+    t.is(promise.controller.signal, controller.signal)
+
+    // atm still the current controller
+    previousController = promise.controller
+
+    await promise
+    t.ok(false, 'Should have given error')
+  } catch (error) {
+    t.is(error.name, 'AbortError')
+    t.ok(previousController !== null)
+    t.ok(promise.controller !== previousController)
   }
 
   t.ok(isAround(Date.now() - started, 0))

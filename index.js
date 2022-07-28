@@ -30,8 +30,13 @@ function fetch (url, options = {}) {
   // + this function is not as clean as I like and there is too much going on but it's difficult due:
   // doing yielded retries, exposing properly the controller for React and wanting make it work for all use cases
   async function callback (resolve, reject) {
-    abortController = handleAbortController(opts)
-    timeoutId = handleTimeout(opts, timeout, abortController.controller)
+    try {
+      abortController = handleAbortController(opts)
+      timeoutId = handleTimeout(opts, timeout, abortController)
+    } catch (error) {
+      reject(error)
+      return
+    }
 
     for await (const backoff of retry(retryOptions)) {
       try {
@@ -72,7 +77,7 @@ function fetch (url, options = {}) {
 
         abortController = handleAbortController(opts)
         promise.controller = abortController.controller
-        promise.timeoutId = handleTimeout(opts, timeout, abortController.controller)
+        promise.timeoutId = handleTimeout(opts, timeout, abortController)
       }
     }
   }
@@ -125,27 +130,39 @@ function handleAbortController (opts) {
   const controllerOpt = remove(opts, 'controller')
   const signalOpt = remove(opts, 'signal')
 
+  if (controllerOpt) {
+    if (signalOpt && controllerOpt.signal !== signalOpt) {
+      throw new Error('If you pass your own controller and signal, they have to be the same (opts.controller.signal === opts.signal)')
+    }
+    return { controller: controllerOpt, signal: controllerOpt.signal, custom: true }
+  }
+
   if (signalOpt) {
     if (controllerOpt && controllerOpt.signal !== signalOpt) {
       throw new Error('If you pass your own controller and signal, they have to be the same (opts.controller.signal === opts.signal)')
     }
-    return { controller: controllerOpt || null, signal: signalOpt }
+    return { controller: controllerOpt || null, signal: signalOpt, custom: true }
   }
 
   const controller = new AbortController()
   return { controller, signal: controller.signal }
 }
 
-function handleTimeout (opts, timeout, controller) {
+function handleTimeout (opts, timeout, abortController) {
   if (timeout === undefined || timeout === 0) return
-  if (opts.signal) throw new Error('Conflict having both opts.timeout and opts.signal, only one allowed')
+  if (abortController.custom && !abortController.controller) throw new Error('Conflict having both opts.timeout and opts.signal, only one allowed or add opts.controller')
+
+  const controller = abortController.controller // to keep the same variable reference
 
   const timeoutId = setTimeout(() => {
     controller.$timedout = true
     controller.abort()
   }, timeout)
+
   if (timeoutId.unref) timeoutId.unref()
+
   controller.signal.addEventListener('abort', () => clearTimeout(timeoutId), { once: true })
+
   return timeoutId
 }
 

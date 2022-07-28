@@ -1,6 +1,6 @@
 # like-fetch
 
-Fetch with added features: timeout, retry, proxy, status validation, simplified response, etc.
+Fetch with added features: timeout, retry, status validation, simplified response, etc.
 
 ![](https://img.shields.io/npm/v/like-fetch.svg) ![](https://img.shields.io/npm/dt/like-fetch.svg) ![](https://img.shields.io/badge/tested_with-tape-e683ff.svg) ![](https://img.shields.io/github/license/LuKks/like-fetch.svg)
 

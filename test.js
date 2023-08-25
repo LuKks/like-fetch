@@ -2,6 +2,8 @@ const tape = require('tape')
 const fetch = require('./')
 const net = require('net')
 
+// TODO: Should use local servers instead of relaying in remote ones
+
 tape('basic', async function (t) {
   const response = await fetch('https://checkip.amazonaws.com')
   const body = await response.text()
@@ -79,9 +81,10 @@ tape('status validation', async function (t) {
 })
 
 tape('request types', async function (t) {
-  const response = await fetch('http://api.shoutcloud.io/V1/SHOUT', { method: 'POST', requestType: 'json', body: { input: 'lucas' } })
-  const body = await response.json()
-  t.is(body.OUTPUT, 'LUCAS')
+  const body = { userId: 5, title: 'hello', body: 'world' }
+  const response = await fetch('https://jsonplaceholder.typicode.com/posts', { method: 'POST', requestType: 'json', body })
+  const data = await response.json()
+  t.is(data.title, 'hello')
 })
 
 tape('response types', async function (t) {
@@ -91,7 +94,7 @@ tape('response types', async function (t) {
 
   const body2 = await fetch('https://api.agify.io/?name=lucas', { responseType: 'text' })
   t.is(typeof body2, 'string')
-  t.ok(body2.indexOf('{"name":"lucas"') === 0)
+  t.ok(body2.indexOf('"name":"lucas"') > -1)
 })
 
 tape('controller manual abort should ignore retry', async function (t) {

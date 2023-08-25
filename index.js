@@ -108,6 +108,12 @@ function handleRequestTypes (opts, requestType) {
     return
   }
 
+  if (requestType === 'url') {
+    if (!opts.headers['content-type']) opts.headers['content-type'] = 'application/x-www-form-urlencoded'
+    if (opts.body !== undefined) opts.body = new URLSearchParams(opts.body).toString()
+    return
+  }
+
   throw new Error('requestType not supported (' + requestType + ')')
 }
 

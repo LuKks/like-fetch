@@ -64,6 +64,10 @@ At this moment, when `validateStatus` fails it throws the `response` object.
 // Sets the 'Content-Type' header to 'application/json'
 // And if body is not undefined then does a JSON.stringify(body)
 const response = await fetch('https://example.com', { requestType: 'json', body: { username: 'test' } })
+
+// Sets the 'Content-Type' header to 'application/x-www-form-urlencoded'
+// And if body is not undefined then it stringifes URLSearchParams using the body
+const response = await fetch('https://example.com', { requestType: 'url', body: { username: 'test' } })
 ```
 
 ## Response types

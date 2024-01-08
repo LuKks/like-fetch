@@ -114,6 +114,11 @@ function handleRequestTypes (opts, requestType) {
     return
   }
 
+  if (requestType === 'text') {
+    if (!opts.headers['content-type']) opts.headers['content-type'] = 'text/plain'
+    return
+  }
+
   throw new Error('requestType not supported (' + requestType + ')')
 }
 

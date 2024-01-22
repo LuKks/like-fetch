@@ -51,6 +51,8 @@ function fetch (url, options = {}) {
         } else {
           resolve(response)
         }
+
+        return
       } catch (error) {
         // manual abort like at React useEffect cleanup, so it must not retry
         if (error.name === 'AbortError' && !promise.controller.$timedout) {

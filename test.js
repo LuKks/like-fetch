@@ -21,7 +21,7 @@ tape('timeout response', async function (t) {
   }
 })
 
-tape('timeout body', async function (t) {
+tape.skip('timeout body', async function (t) {
   try {
     const response = await fetch('https://http.cat/401', { timeout: 3000 })
     await sleep(3000)

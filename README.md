@@ -24,7 +24,7 @@ const ip = await fetch('https://example.com', {
   timeout: 5000, // Uses AbortController, signal, etc
   retry: { max: 3 }, // This retry object is passed to like-retry
   validateStatus: 200, // Throw if status is not correct
-  requestType: 'json' // Will automatically do JSON.stringify(body)
+  requestType: 'json', // Will automatically do JSON.stringify(body)
   responseType: 'json' // Will automatically do response.json()
 })
 ```

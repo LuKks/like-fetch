@@ -24,7 +24,8 @@ const ip = await fetch('https://example.com', {
   timeout: 5000, // Uses AbortController, signal, etc
   retry: { max: 3 }, // This retry object is passed to like-retry
   validateStatus: 200, // Throw if status is not correct
-  responseType: 'text' // Will automatically do response.text()
+  requestType: 'json' // Will automatically do JSON.stringify(body)
+  responseType: 'json' // Will automatically do response.json()
 })
 ```
 
@@ -101,25 +102,6 @@ useEffect(() => {
   return () => promise.controller.abort()
 }, [account])
 ```
-
-## Caution with controller
-Don't do this with the `controller` variable and `retry` option:
-
-```javascript
-useEffect(() => {
-  const promise = fetch(..., { retry: { max: 3 } })
-  const controller = promise.controller // DON'T
-  // ...
-  return () => controller.abort()
-}, [])
-```
-
-This also applies outside of React:\
-The `promise.controller` property will change on every retry.\
-That's because signals can't be reused.\
-If you don't use the `retry` option then that case is okay.\
-Still a bad practice as it's easy to fall in that bug.\
-So avoid isolating the controller, check the first `useEffect` example again.
 
 ## License
 MIT

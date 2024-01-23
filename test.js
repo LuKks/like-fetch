@@ -19,7 +19,7 @@ tape('timeout response', async function (t) {
     await fetch('https://checkip.amazonaws.com', { timeout: 1 })
     t.ok(false, 'Should have given error')
   } catch (error) {
-    t.is(error.name, 'AbortError')
+    t.is(error.name, 'TimeoutError')
   }
 })
 
@@ -30,7 +30,7 @@ tape.skip('timeout body', async function (t) {
     await response.blob()
     t.ok(false, 'Should have given error')
   } catch (error) {
-    t.is(error.name, 'AbortError')
+    t.is(error.name, 'TimeoutError')
   }
 })
 
@@ -42,7 +42,7 @@ tape('retry', async function (t) {
     await fetch('https://checkip.amazonaws.com', { timeout: 1, retry })
     t.ok(false, 'Should have given error')
   } catch (error) {
-    t.is(error.name, 'AbortError')
+    t.is(error.name, 'TimeoutError')
   }
 
   t.ok(isAround(Date.now() - started, 6000))
@@ -128,7 +128,7 @@ tape('controller changes at every retry', async function (t) {
     await promise
     t.ok(false, 'Should have given error')
   } catch (error) {
-    t.is(error.name, 'AbortError')
+    t.is(error.name, 'TimeoutError')
     t.ok(controller !== null)
     t.ok(promise.controller !== controller) // controller changed!
   }
@@ -149,7 +149,7 @@ tape('timeout + custom signal with controller should be ok', async function (t) 
     await promise
     t.ok(false, 'Should have given error')
   } catch (error) {
-    t.is(error.name, 'AbortError')
+    t.is(error.name, 'TimeoutError')
     t.ok(promise.controller !== previousController)
   }
 
@@ -168,7 +168,7 @@ tape('timeout + custom controller without passing signal should be ok', async fu
     await promise
     t.ok(false, 'Should have given error')
   } catch (error) {
-    t.is(error.name, 'AbortError')
+    t.is(error.name, 'TimeoutError')
     t.ok(promise.controller !== previousController)
   }
 

@@ -40,10 +40,10 @@ function fetch (url, options = {}) {
 
         return
       } catch (error) {
-        // Manual abort like at React useEffect cleanup, so it must not retry
-        if ((error.name === 'AbortError' || error.name === 'TimeoutError') && !(timeoutSignal && timeoutSignal.aborted)) {
-          reject(error)
-          return
+        // Patch TimeoutError due AbortSignal.any
+        if (error.name === 'AbortError') {
+          const timeoutError = getSignalError(timeoutSignal)
+          if (timeoutError) error = timeoutError // eslint-disable-line no-ex-assign
         }
 
         if (error.response) {
@@ -54,7 +54,7 @@ function fetch (url, options = {}) {
           }
         }
 
-        if (error.name === 'LikeFetchError') {
+        if (error.name === 'AbortError' || error.name === 'LikeFetchError') {
           reject(error)
           return
         }
@@ -173,6 +173,18 @@ class LikeFetchError extends Error {
   get name () {
     return 'LikeFetchError'
   }
+}
+
+function getSignalError (signal) {
+  if (!signal || !signal.aborted) return null
+
+  try {
+    signal.throwIfAborted()
+  } catch (err) {
+    return err
+  }
+
+  return null
 }
 
 // It avoids passing non-standard args to native fetch() like timeout, validateStatus, etc

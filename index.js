@@ -46,12 +46,10 @@ function fetch (url, options = {}) {
           if (timeoutError) error = timeoutError // eslint-disable-line no-ex-assign
         }
 
-        if (error.response) {
-          if (responseType === 'json' || responseType === 'text') {
-            try {
-              error.body = await error.response[responseType]()
-            } catch {}
-          }
+        if (error.response && (responseType === 'json' || responseType === 'text')) {
+          try {
+            error.body = await error.response[responseType]()
+          } catch {}
         }
 
         if (error.name === 'AbortError' || error.name === 'LikeFetchError') {

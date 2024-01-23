@@ -1,7 +1,9 @@
 const tape = require('tape')
 const fetch = require('./')
 const net = require('net')
+const http = require('http')
 
+// TODO: Use brittle for testing
 // TODO: Should use local servers instead of relaying in remote ones
 
 tape('basic', async function (t) {
@@ -17,7 +19,7 @@ tape('timeout response', async function (t) {
     await fetch('https://checkip.amazonaws.com', { timeout: 1 })
     t.ok(false, 'Should have given error')
   } catch (error) {
-    t.is(error.name, 'AbortError')
+    t.is(error.name, 'TimeoutError')
   }
 })
 
@@ -28,7 +30,7 @@ tape.skip('timeout body', async function (t) {
     await response.blob()
     t.ok(false, 'Should have given error')
   } catch (error) {
-    t.is(error.name, 'AbortError')
+    t.is(error.name, 'TimeoutError')
   }
 })
 
@@ -40,7 +42,7 @@ tape('retry', async function (t) {
     await fetch('https://checkip.amazonaws.com', { timeout: 1, retry })
     t.ok(false, 'Should have given error')
   } catch (error) {
-    t.is(error.name, 'AbortError')
+    t.is(error.name, 'TimeoutError')
   }
 
   t.ok(isAround(Date.now() - started, 6000))
@@ -50,15 +52,17 @@ tape('status validation', async function (t) {
   try {
     await fetch('https://checkip.amazonaws.com', { validateStatus: 404 })
     t.ok(false, 'Should have given error')
-  } catch (error) {
-    t.is(error.constructor.name, 'Response')
+  } catch (err) {
+    t.ok(err.response)
+    t.is(err.name, 'LikeFetchError')
   }
 
   try {
     await fetch('https://api.agify.io/not-found', { validateStatus: 'ok' })
     t.ok(false, 'Should have given error')
-  } catch (error) {
-    t.is(error.constructor.name, 'Response')
+  } catch (err) {
+    t.ok(err.response)
+    t.is(err.name, 'LikeFetchError')
   }
 
   try {
@@ -75,8 +79,9 @@ tape('status validation', async function (t) {
     const validateStatus = status => status !== 200
     await fetch('https://checkip.amazonaws.com', { validateStatus })
     t.ok(false, 'Should have given error')
-  } catch (error) {
-    t.is(error.constructor.name, 'Response')
+  } catch (err) {
+    t.ok(err.response)
+    t.is(err.name, 'LikeFetchError')
   }
 })
 
@@ -123,23 +128,9 @@ tape('controller changes at every retry', async function (t) {
     await promise
     t.ok(false, 'Should have given error')
   } catch (error) {
-    t.is(error.name, 'AbortError')
+    t.is(error.name, 'TimeoutError')
     t.ok(controller !== null)
     t.ok(promise.controller !== controller) // controller changed!
-  }
-
-  t.ok(isAround(Date.now() - started, 0))
-})
-
-tape('can not have timeout + custom signal without controller', async function (t) {
-  const started = Date.now()
-
-  const controller = new AbortController()
-  try {
-    await fetch('https://checkip.amazonaws.com', { timeout: 1, signal: controller.signal })
-    t.ok(false, 'Should have given error')
-  } catch (error) {
-    t.ok(error.message.indexOf('Conflict having both opts.timeout and opts.signal') === 0)
   }
 
   t.ok(isAround(Date.now() - started, 0))
@@ -149,21 +140,16 @@ tape('timeout + custom signal with controller should be ok', async function (t) 
   const started = Date.now()
 
   const controller = new AbortController()
-  const promise = fetch('https://checkip.amazonaws.com', { timeout: 1, retry: { max: 1 }, controller, signal: controller.signal })
+  const promise = fetch('https://checkip.amazonaws.com', { timeout: 1, retry: { max: 1 }, signal: controller.signal })
 
   let previousController = null
   try {
-    t.is(promise.controller, controller)
-    t.is(promise.controller.signal, controller.signal)
-
-    // atm still the current controller
     previousController = promise.controller
 
     await promise
     t.ok(false, 'Should have given error')
   } catch (error) {
-    t.is(error.name, 'AbortError')
-    t.ok(previousController !== null)
+    t.is(error.name, 'TimeoutError')
     t.ok(promise.controller !== previousController)
   }
 
@@ -173,26 +159,82 @@ tape('timeout + custom signal with controller should be ok', async function (t) 
 tape('timeout + custom controller without passing signal should be ok', async function (t) {
   const started = Date.now()
 
-  const controller = new AbortController()
-  const promise = fetch('https://checkip.amazonaws.com', { timeout: 1, retry: { max: 1 }, controller })
+  const promise = fetch('https://checkip.amazonaws.com', { timeout: 1, retry: { max: 1 } })
 
   let previousController = null
   try {
-    t.is(promise.controller, controller)
-    t.is(promise.controller.signal, controller.signal)
-
-    // atm still the current controller
     previousController = promise.controller
 
     await promise
     t.ok(false, 'Should have given error')
   } catch (error) {
-    t.is(error.name, 'AbortError')
-    t.ok(previousController !== null)
+    t.is(error.name, 'TimeoutError')
     t.ok(promise.controller !== previousController)
   }
 
   t.ok(isAround(Date.now() - started, 0))
+})
+
+tape('could not send the request', async function (t) {
+  try {
+    await fetch('http://127.0.0.1:123')
+    t.ok(false, 'Should have given error')
+  } catch (err) {
+    t.notOk(err.response)
+    t.is(err.name, 'FetchError') // Native Fetch error
+    t.is(err.code, 'ECONNREFUSED')
+  }
+})
+
+tape('bad request', async function (t) {
+  const close = await createServer(3000, (req, res) => { res.writeHead(400).end('Hello') })
+
+  try {
+    await fetch('http://127.0.0.1:3000', { validateStatus: 'ok' })
+    t.ok(false, 'Should have given error')
+  } catch (err) {
+    if (!err.response) throw err
+
+    t.is(err.name, 'LikeFetchError')
+    t.is(err.code, 'ERR_BAD_REQUEST')
+    t.is(await err.response.text(), 'Hello')
+  }
+
+  await close()
+})
+
+tape('bad response', async function (t) {
+  const close = await createServer(3000, (req, res) => res.writeHead(500).end('Hello'))
+
+  try {
+    await fetch('http://127.0.0.1:3000', { validateStatus: 'ok' })
+    t.ok(false, 'Should have given error')
+  } catch (err) {
+    if (!err.response) throw err
+
+    t.is(err.name, 'LikeFetchError')
+    t.is(err.code, 'ERR_BAD_RESPONSE')
+    t.is(await err.response.text(), 'Hello')
+  }
+
+  await close()
+})
+
+tape('response type works when validate fails', async function (t) {
+  const close = await createServer(3000, (req, res) => res.writeHead(400).end(JSON.stringify({ hello: 'world' })))
+
+  try {
+    await fetch('http://127.0.0.1:3000', { responseType: 'json', validateStatus: 'ok' })
+    t.ok(false, 'Should have given error')
+  } catch (err) {
+    if (!err.response) throw err
+
+    t.is(err.name, 'LikeFetchError')
+    t.is(err.code, 'ERR_BAD_REQUEST')
+    t.deepEqual(err.body, { hello: 'world' })
+  }
+
+  await close()
 })
 
 function isAround (delay, real, precision = 150) {
@@ -202,4 +244,33 @@ function isAround (delay, real, precision = 150) {
 
 function sleep (ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+async function createServer (port, onrequest) {
+  const server = http.createServer(onrequest)
+
+  await listen(server, port)
+
+  return async function () {
+    await new Promise(resolve => server.close(resolve))
+    // TODO: Unsure why this is required, maybe due tape?
+    await new Promise(resolve => setImmediate(resolve))
+  }
+}
+
+function listen (server, port, address) {
+  return new Promise((resolve, reject) => {
+    server.on('listening', done)
+    server.on('error', done)
+
+    server.listen(port)
+
+    function done (err) {
+      server.off('listening', done)
+      server.off('error', done)
+
+      if (err) reject(err)
+      else resolve()
+    }
+  })
 }

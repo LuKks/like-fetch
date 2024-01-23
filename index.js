@@ -165,7 +165,6 @@ class LikeFetchError extends Error {
     super(msg)
     this.code = code
 
-    this.cause = null
     this.response = response
     this.body = undefined
   }

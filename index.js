@@ -57,6 +57,10 @@ function fetch (url, options = {}) {
 
         try {
           await backoff(error)
+
+          // Don't retry on user signals
+          if (signal) signal.throwIfAborted()
+          promise.controller.signal.throwIfAborted()
         } catch (err) {
           reject(err)
           return

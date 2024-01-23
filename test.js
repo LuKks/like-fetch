@@ -237,6 +237,28 @@ tape('response type works when validate fails', async function (t) {
   await close()
 })
 
+tape('user controller on the edge of a failing response', async function (t) {
+  const close = await createServer(3000, (req, res) => res.writeHead(400).end(JSON.stringify({ hello: 'world' })))
+
+  try {
+    const req = fetch('http://127.0.0.1:3000', {
+      retry: { max: 9999999 },
+      validateStatus: status => {
+        req.controller.abort()
+        throw new Error('Failed')
+      }
+    })
+
+    await req
+
+    t.ok(false, 'Should have given error')
+  } catch (err) {
+    t.is(err.name, 'AbortError')
+  }
+
+  await close()
+})
+
 function isAround (delay, real, precision = 150) {
   const diff = Math.abs(delay - real)
   return diff <= precision

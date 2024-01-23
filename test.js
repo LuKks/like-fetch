@@ -231,7 +231,7 @@ tape('response type works when validate fails', async function (t) {
 
     t.is(err.name, 'LikeFetchError')
     t.is(err.code, 'ERR_BAD_REQUEST')
-    t.deepEqual(err.data, { hello: 'world' })
+    t.deepEqual(err.body, { hello: 'world' })
   }
 
   await close()

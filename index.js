@@ -47,7 +47,7 @@ function fetch (url, options = {}) {
         if (error.response) {
           if (responseType === 'json' || responseType === 'text') {
             try {
-              error.data = await error.response[responseType]()
+              error.body = await error.response[responseType]()
             } catch {}
           }
         }
@@ -150,7 +150,7 @@ class LikeFetchError extends Error {
 
     this.cause = null
     this.response = response
-    this.data = undefined
+    this.body = undefined
   }
 
   get name () {

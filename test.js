@@ -248,13 +248,11 @@ function sleep (ms) {
 
 async function createServer (port, onrequest) {
   const server = http.createServer(onrequest)
-  const onclose = new Promise(resolve => server.once('close', resolve))
 
   await listen(server, port)
 
   return async function () {
-    server.close()
-    await onclose
+    await new Promise(resolve => server.close(resolve))
     // TODO: Unsure why this is required, maybe due tape?
     await new Promise(resolve => setImmediate(resolve))
   }

@@ -40,7 +40,7 @@ function fetch (url, options = {}) {
 
         return
       } catch (error) {
-        // manual abort like at React useEffect cleanup, so it must not retry
+        // Manual abort like at React useEffect cleanup, so it must not retry
         if ((error.name === 'AbortError' || error.name === 'TimeoutError') && !(timeoutSignal && timeoutSignal.aborted)) {
           reject(error)
           return
@@ -173,7 +173,7 @@ class LikeFetchError extends Error {
   }
 }
 
-// it avoids passing non-standard args to native fetch(), like opts.timeout, validateStatus, etc
+// It avoids passing non-standard args to native fetch() like timeout, validateStatus, etc
 function remove (obj, key) {
   const value = obj[key]
   delete obj[key]

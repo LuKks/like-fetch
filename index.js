@@ -79,10 +79,12 @@ function fetch (url, options = {}) {
 /* function handleProxyAgent (opts, proxy) {
   if (!proxy) return
   if (opts.agent) throw new Error('Conflict having both opts.proxy and opts.agent, only one allowed')
+
   // + add support for passing an object { host, port, auth: { username, password } }
   // + add support for socks5
   const HttpsProxyAgent = require('https-proxy-agent')
   const agent = new HttpsProxyAgent(proxy)
+
   return agent
 } */
 

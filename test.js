@@ -185,10 +185,10 @@ test('could not send the request', async function (t) {
 })
 
 test('bad request', async function (t) {
-  const close = await createServer(3000, (req, res) => { res.writeHead(400).end('Hello') })
+  const port = await createServer(t, (req, res) => { res.writeHead(400).end('Hello') })
 
   try {
-    await fetch('http://127.0.0.1:3000', { validateStatus: 'ok' })
+    await fetch('http://127.0.0.1:' + port, { validateStatus: 'ok' })
     t.fail('Should have given error')
   } catch (err) {
     if (!err.response) throw err
@@ -197,15 +197,13 @@ test('bad request', async function (t) {
     t.is(err.code, 'ERR_BAD_REQUEST')
     t.is(await err.response.text(), 'Hello')
   }
-
-  await close()
 })
 
 test('bad response', async function (t) {
-  const close = await createServer(3000, (req, res) => res.writeHead(500).end('Hello'))
+  const port = await createServer(t, (req, res) => res.writeHead(500).end('Hello'))
 
   try {
-    await fetch('http://127.0.0.1:3000', { validateStatus: 'ok' })
+    await fetch('http://127.0.0.1:' + port, { validateStatus: 'ok' })
     t.fail('Should have given error')
   } catch (err) {
     if (!err.response) throw err
@@ -214,15 +212,13 @@ test('bad response', async function (t) {
     t.is(err.code, 'ERR_BAD_RESPONSE')
     t.is(await err.response.text(), 'Hello')
   }
-
-  await close()
 })
 
 test('response type works when validate fails', async function (t) {
-  const close = await createServer(3000, (req, res) => res.writeHead(400).end(JSON.stringify({ hello: 'world' })))
+  const port = await createServer(t, (req, res) => res.writeHead(400).end(JSON.stringify({ hello: 'world' })))
 
   try {
-    await fetch('http://127.0.0.1:3000', { responseType: 'json', validateStatus: 'ok' })
+    await fetch('http://127.0.0.1:' + port, { responseType: 'json', validateStatus: 'ok' })
     t.fail('Should have given error')
   } catch (err) {
     if (!err.response) throw err
@@ -231,15 +227,13 @@ test('response type works when validate fails', async function (t) {
     t.is(err.code, 'ERR_BAD_REQUEST')
     t.alike(err.body, { hello: 'world' })
   }
-
-  await close()
 })
 
 test('user controller on the edge of a failing response', async function (t) {
-  const close = await createServer(3000, (req, res) => res.writeHead(400).end(JSON.stringify({ hello: 'world' })))
+  const port = await createServer(t, (req, res) => res.writeHead(400).end(JSON.stringify({ hello: 'world' })))
 
   try {
-    const req = fetch('http://127.0.0.1:3000', {
+    const req = fetch('http://127.0.0.1:' + port, {
       retry: { max: 9999999 },
       validateStatus: status => {
         req.controller.abort()
@@ -253,8 +247,6 @@ test('user controller on the edge of a failing response', async function (t) {
   } catch (err) {
     t.is(err.name, 'AbortError')
   }
-
-  await close()
 })
 
 function isAround (delay, real, precision = 150) {
@@ -266,16 +258,14 @@ function sleep (ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-async function createServer (port, onrequest) {
+async function createServer (t, onrequest) {
   const server = http.createServer(onrequest)
 
-  await listen(server, port)
+  t.teardown(() => new Promise(resolve => server.close(resolve)))
 
-  return async function () {
-    await new Promise(resolve => server.close(resolve))
-    // TODO: Unsure why this is required, maybe due tape?
-    await new Promise(resolve => setImmediate(resolve))
-  }
+  await listen(server, 0)
+
+  return server.address().port
 }
 
 function listen (server, port, address) {

@@ -89,8 +89,17 @@ test('status validation', async function (t) {
 })
 
 test('request types', async function (t) {
+  const port = await createServer(t, (req, res) => {
+    let received = ''
+    req.setEncoding('utf8')
+    req.on('data', chunk => { received += chunk })
+    req.on('end', () => {
+      res.writeHead(200, { 'Content-Type': 'application/json' }).end(received)
+    })
+  })
+
   const body = { userId: 5, title: 'hello', body: 'world' }
-  const response = await fetch('https://jsonplaceholder.typicode.com/posts', { method: 'POST', requestType: 'json', body })
+  const response = await fetch('http://127.0.0.1:' + port, { method: 'POST', requestType: 'json', body })
   const data = await response.json()
   t.is(data.title, 'hello')
 })

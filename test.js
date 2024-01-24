@@ -14,8 +14,12 @@ test('basic', async function (t) {
 })
 
 test('timeout response', async function (t) {
+  const port = await createServer(t, (req, res) => {
+    setTimeout(() => { res.writeHead(200).end() }, 30000)
+  })
+
   try {
-    await fetch('https://checkip.amazonaws.com', { timeout: 1 })
+    await fetch('http://127.0.0.1:' + port, { timeout: 1 })
     t.fail('Should have given error')
   } catch (error) {
     t.is(error.name, 'TimeoutError')

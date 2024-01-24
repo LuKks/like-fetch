@@ -229,7 +229,7 @@ test('response type works when validate fails', async function (t) {
 
     t.is(err.name, 'LikeFetchError')
     t.is(err.code, 'ERR_BAD_REQUEST')
-    t.is(err.body?.hello, 'world')
+    t.alike(err.body, { hello: 'world' })
   }
 
   await close()

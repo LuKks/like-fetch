@@ -1,32 +1,22 @@
 const test = require('brittle')
 const fetch = require('./')
-const net = require('net')
 const http = require('http')
 
-// TODO: Should use local servers instead of relaying in remote ones
-
 test('basic', async function (t) {
-  const response = await fetch('https://checkip.amazonaws.com')
-  const body = await response.text()
+  const port = await createServer(t, (req, res) => { res.writeHead(200).end('hello') })
 
-  const ip = body.trim()
-  t.ok(net.isIP(ip))
+  const response = await fetch('http://127.0.0.1:' + port)
+  const body = await response.text()
+  t.is(body, 'hello')
 })
 
 test('timeout response', async function (t) {
-  try {
-    await fetch('https://checkip.amazonaws.com', { timeout: 1 })
-    t.fail('Should have given error')
-  } catch (error) {
-    t.is(error.name, 'TimeoutError')
-  }
-})
+  const port = await createServer(t, (req, res) => {
+    setTimeout(() => { res.writeHead(200).end() }, 30000)
+  })
 
-test.skip('timeout body', async function (t) {
   try {
-    const response = await fetch('https://http.cat/401', { timeout: 3000 })
-    await sleep(3000)
-    await response.blob()
+    await fetch('http://127.0.0.1:' + port, { timeout: 1 })
     t.fail('Should have given error')
   } catch (error) {
     t.is(error.name, 'TimeoutError')
@@ -34,11 +24,15 @@ test.skip('timeout body', async function (t) {
 })
 
 test('retry', async function (t) {
+  const port = await createServer(t, (req, res) => {
+    setTimeout(() => { res.writeHead(200).end() }, 30000)
+  })
+
   const started = Date.now()
 
   try {
     const retry = { max: 3, delay: 1000, strategy: 'linear' }
-    await fetch('https://checkip.amazonaws.com', { timeout: 1, retry })
+    await fetch('http://127.0.0.1:' + port, { timeout: 1, retry })
     t.fail('Should have given error')
   } catch (error) {
     t.is(error.name, 'TimeoutError')
@@ -49,7 +43,9 @@ test('retry', async function (t) {
 
 test('status validation', async function (t) {
   try {
-    await fetch('https://checkip.amazonaws.com', { validateStatus: 404 })
+    const port = await createServer(t, (req, res) => res.writeHead(200).end())
+
+    await fetch('http://127.0.0.1:' + port, { validateStatus: 404 })
     t.fail('Should have given error')
   } catch (err) {
     t.ok(err.response)
@@ -57,7 +53,9 @@ test('status validation', async function (t) {
   }
 
   try {
-    await fetch('https://api.agify.io/not-found', { validateStatus: 'ok' })
+    const port = await createServer(t, (req, res) => res.writeHead(404).end())
+
+    await fetch('http://127.0.0.1:' + port, { validateStatus: 'ok' })
     t.fail('Should have given error')
   } catch (err) {
     t.ok(err.response)
@@ -65,18 +63,19 @@ test('status validation', async function (t) {
   }
 
   try {
+    const port = await createServer(t, (req, res) => res.writeHead(200).end())
+
     const validateStatus = status => status === 200
-    const response = await fetch('https://checkip.amazonaws.com', { validateStatus })
-    const body = await response.text()
-    const ip = body.trim()
-    t.ok(net.isIP(ip))
+    await fetch('http://127.0.0.1:' + port, { validateStatus })
   } catch (error) {
     t.fail('Should not have given error')
   }
 
   try {
+    const port = await createServer(t, (req, res) => res.writeHead(200).end())
+
     const validateStatus = status => status !== 200
-    await fetch('https://checkip.amazonaws.com', { validateStatus })
+    await fetch('http://127.0.0.1:' + port, { validateStatus })
     t.fail('Should have given error')
   } catch (err) {
     t.ok(err.response)
@@ -85,27 +84,42 @@ test('status validation', async function (t) {
 })
 
 test('request types', async function (t) {
+  const port = await createServer(t, (req, res) => {
+    let received = ''
+    req.setEncoding('utf8')
+    req.on('data', chunk => { received += chunk })
+    req.on('end', () => {
+      res.writeHead(200, { 'Content-Type': 'application/json' }).end(received)
+    })
+  })
+
   const body = { userId: 5, title: 'hello', body: 'world' }
-  const response = await fetch('https://jsonplaceholder.typicode.com/posts', { method: 'POST', requestType: 'json', body })
+  const response = await fetch('http://127.0.0.1:' + port, { method: 'POST', requestType: 'json', body })
   const data = await response.json()
   t.is(data.title, 'hello')
 })
 
 test('response types', async function (t) {
-  const body1 = await fetch('https://api.agify.io/?name=lucas', { responseType: 'json' })
-  t.is(typeof body1, 'object')
-  t.is(body1.name, 'lucas')
+  const port = await createServer(t, (req, res) => {
+    res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ name: 'lucas' }))
+  })
 
-  const body2 = await fetch('https://api.agify.io/?name=lucas', { responseType: 'text' })
+  const body1 = await fetch('http://127.0.0.1:' + port, { responseType: 'json' })
+  t.is(typeof body1, 'object')
+  t.alike(body1, { name: 'lucas' })
+
+  const body2 = await fetch('http://127.0.0.1:' + port, { responseType: 'text' })
   t.is(typeof body2, 'string')
   t.ok(body2.indexOf('"name":"lucas"') > -1)
 })
 
 test('controller manual abort should ignore retry', async function (t) {
+  const port = await createServer(t, (req, res) => { res.writeHead(200).end() })
+
   const started = Date.now()
 
   try {
-    const promise = fetch('https://checkip.amazonaws.com', { retry: { max: 3, delay: 1000 } })
+    const promise = fetch('http://127.0.0.1:' + port, { retry: { max: 3, delay: 1000 } })
     promise.controller.abort()
     await promise
     t.fail('Should have given error')
@@ -117,10 +131,14 @@ test('controller manual abort should ignore retry', async function (t) {
 })
 
 test('controller changes at every retry', async function (t) {
+  const port = await createServer(t, (req, res) => {
+    setTimeout(() => { res.writeHead(200).end() }, 30000)
+  })
+
   const started = Date.now()
 
   // with timeout at 1 (one) we make it fail and just one retry is enough to change the "promise.controller"
-  const promise = fetch('https://checkip.amazonaws.com', { timeout: 1, retry: { max: 1 } })
+  const promise = fetch('http://127.0.0.1:' + port, { timeout: 1, retry: { max: 1 } })
   const controller = promise.controller
 
   try {
@@ -136,10 +154,14 @@ test('controller changes at every retry', async function (t) {
 })
 
 test('timeout + custom signal with controller should be ok', async function (t) {
+  const port = await createServer(t, (req, res) => {
+    setTimeout(() => { res.writeHead(200).end() }, 30000)
+  })
+
   const started = Date.now()
 
   const controller = new AbortController()
-  const promise = fetch('https://checkip.amazonaws.com', { timeout: 1, retry: { max: 1 }, signal: controller.signal })
+  const promise = fetch('http://127.0.0.1:' + port, { timeout: 1, retry: { max: 1 }, signal: controller.signal })
 
   let previousController = null
   try {
@@ -156,9 +178,13 @@ test('timeout + custom signal with controller should be ok', async function (t) 
 })
 
 test('timeout + custom controller without passing signal should be ok', async function (t) {
+  const port = await createServer(t, (req, res) => {
+    setTimeout(() => { res.writeHead(200).end() }, 30000)
+  })
+
   const started = Date.now()
 
-  const promise = fetch('https://checkip.amazonaws.com', { timeout: 1, retry: { max: 1 } })
+  const promise = fetch('http://127.0.0.1:' + port, { timeout: 1, retry: { max: 1 } })
 
   let previousController = null
   try {
@@ -252,10 +278,6 @@ test('user controller on the edge of a failing response', async function (t) {
 function isAround (delay, real, precision = 150) {
   const diff = Math.abs(delay - real)
   return diff <= precision
-}
-
-function sleep (ms) {
-  return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 async function createServer (t, onrequest) {

@@ -4,8 +4,8 @@
   "description": "Fetch with added features: timeout, retry, status validation, simplified response, etc",
   "main": "index.js",
   "scripts": {
-    "test": "standard && tape test.js",
-    "tape": "tape test.js",
+    "test": "standard && brittle test.js",
+    "tape": "brittle test.js",
     "lint": "standard"
   },
   "repository": {
@@ -23,7 +23,7 @@
     "like-retry": "^1.1.0"
   },
   "devDependencies": {
-    "standard": "^17.0.0",
-    "tape": "^5.5.3"
+    "brittle": "^3.3.2",
+    "standard": "^17.0.0"
   }
 }

@@ -6,11 +6,11 @@ const http = require('http')
 // TODO: Should use local servers instead of relaying in remote ones
 
 test('basic', async function (t) {
-  const response = await fetch('https://checkip.amazonaws.com')
-  const body = await response.text()
+  const port = await createServer(t, (req, res) => { res.writeHead(200).end('hello') })
 
-  const ip = body.trim()
-  t.ok(net.isIP(ip))
+  const response = await fetch('http://127.0.0.1:' + port)
+  const body = await response.text()
+  t.is(body, 'hello')
 })
 
 test('timeout response', async function (t) {

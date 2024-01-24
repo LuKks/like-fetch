@@ -123,10 +123,12 @@ test('controller manual abort should ignore retry', async function (t) {
 })
 
 test('controller changes at every retry', async function (t) {
+  const port = await createServer(t, (req, res) => { res.writeHead(200).end() })
+
   const started = Date.now()
 
   // with timeout at 1 (one) we make it fail and just one retry is enough to change the "promise.controller"
-  const promise = fetch('https://checkip.amazonaws.com', { timeout: 1, retry: { max: 1 } })
+  const promise = fetch('http://127.0.0.1:' + port, { timeout: 1, retry: { max: 1 } })
   const controller = promise.controller
 
   try {

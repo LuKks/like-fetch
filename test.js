@@ -2,8 +2,6 @@ const test = require('brittle')
 const fetch = require('./')
 const http = require('http')
 
-// TODO: Should use local servers instead of relaying in remote ones
-
 test('basic', async function (t) {
   const port = await createServer(t, (req, res) => { res.writeHead(200).end('hello') })
 

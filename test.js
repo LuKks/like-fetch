@@ -92,20 +92,26 @@ test('request types', async function (t) {
 })
 
 test('response types', async function (t) {
-  const body1 = await fetch('https://api.agify.io/?name=lucas', { responseType: 'json' })
-  t.is(typeof body1, 'object')
-  t.is(body1.name, 'lucas')
+  const port = await createServer(t, (req, res) => {
+    res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ name: 'lucas' }))
+  })
 
-  const body2 = await fetch('https://api.agify.io/?name=lucas', { responseType: 'text' })
+  const body1 = await fetch('http://127.0.0.1:' + port, { responseType: 'json' })
+  t.is(typeof body1, 'object')
+  t.alike(body1, { name: 'lucas' })
+
+  const body2 = await fetch('http://127.0.0.1:' + port, { responseType: 'text' })
   t.is(typeof body2, 'string')
   t.ok(body2.indexOf('"name":"lucas"') > -1)
 })
 
 test('controller manual abort should ignore retry', async function (t) {
+  const port = await createServer(t, (req, res) => { res.writeHead(200).end() })
+
   const started = Date.now()
 
   try {
-    const promise = fetch('https://checkip.amazonaws.com', { retry: { max: 3, delay: 1000 } })
+    const promise = fetch('http://127.0.0.1:' + port, { retry: { max: 3, delay: 1000 } })
     promise.controller.abort()
     await promise
     t.fail('Should have given error')
@@ -136,10 +142,12 @@ test('controller changes at every retry', async function (t) {
 })
 
 test('timeout + custom signal with controller should be ok', async function (t) {
+  const port = await createServer(t, (req, res) => { res.writeHead(200).end() })
+
   const started = Date.now()
 
   const controller = new AbortController()
-  const promise = fetch('https://checkip.amazonaws.com', { timeout: 1, retry: { max: 1 }, signal: controller.signal })
+  const promise = fetch('http://127.0.0.1:' + port, { timeout: 1, retry: { max: 1 }, signal: controller.signal })
 
   let previousController = null
   try {
@@ -156,9 +164,11 @@ test('timeout + custom signal with controller should be ok', async function (t) 
 })
 
 test('timeout + custom controller without passing signal should be ok', async function (t) {
+  const port = await createServer(t, (req, res) => { res.writeHead(200).end() })
+
   const started = Date.now()
 
-  const promise = fetch('https://checkip.amazonaws.com', { timeout: 1, retry: { max: 1 } })
+  const promise = fetch('http://127.0.0.1:' + port, { timeout: 1, retry: { max: 1 } })
 
   let previousController = null
   try {

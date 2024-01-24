@@ -127,7 +127,9 @@ test('controller manual abort should ignore retry', async function (t) {
 })
 
 test('controller changes at every retry', async function (t) {
-  const port = await createServer(t, (req, res) => { res.writeHead(200).end() })
+  const port = await createServer(t, (req, res) => {
+    setTimeout(() => { res.writeHead(200).end() }, 30000)
+  })
 
   const started = Date.now()
 
@@ -148,7 +150,9 @@ test('controller changes at every retry', async function (t) {
 })
 
 test('timeout + custom signal with controller should be ok', async function (t) {
-  const port = await createServer(t, (req, res) => { res.writeHead(200).end() })
+  const port = await createServer(t, (req, res) => {
+    setTimeout(() => { res.writeHead(200).end() }, 30000)
+  })
 
   const started = Date.now()
 
@@ -170,7 +174,9 @@ test('timeout + custom signal with controller should be ok', async function (t) 
 })
 
 test('timeout + custom controller without passing signal should be ok', async function (t) {
-  const port = await createServer(t, (req, res) => { res.writeHead(200).end() })
+  const port = await createServer(t, (req, res) => {
+    setTimeout(() => { res.writeHead(200).end() }, 30000)
+  })
 
   const started = Date.now()
 

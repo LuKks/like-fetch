@@ -1,6 +1,5 @@
 const test = require('brittle')
 const fetch = require('./')
-const net = require('net')
 const http = require('http')
 
 // TODO: Should use local servers instead of relaying in remote ones
@@ -46,7 +45,9 @@ test('retry', async function (t) {
 
 test('status validation', async function (t) {
   try {
-    await fetch('https://checkip.amazonaws.com', { validateStatus: 404 })
+    const port = await createServer(t, (req, res) => res.writeHead(200).end())
+
+    await fetch('http://127.0.0.1:' + port, { validateStatus: 404 })
     t.fail('Should have given error')
   } catch (err) {
     t.ok(err.response)
@@ -54,7 +55,9 @@ test('status validation', async function (t) {
   }
 
   try {
-    await fetch('https://api.agify.io/not-found', { validateStatus: 'ok' })
+    const port = await createServer(t, (req, res) => res.writeHead(404).end())
+
+    await fetch('http://127.0.0.1:' + port, { validateStatus: 'ok' })
     t.fail('Should have given error')
   } catch (err) {
     t.ok(err.response)
@@ -62,18 +65,19 @@ test('status validation', async function (t) {
   }
 
   try {
+    const port = await createServer(t, (req, res) => res.writeHead(200).end())
+
     const validateStatus = status => status === 200
-    const response = await fetch('https://checkip.amazonaws.com', { validateStatus })
-    const body = await response.text()
-    const ip = body.trim()
-    t.ok(net.isIP(ip))
+    await fetch('http://127.0.0.1:' + port, { validateStatus })
   } catch (error) {
     t.fail('Should not have given error')
   }
 
   try {
+    const port = await createServer(t, (req, res) => res.writeHead(200).end())
+
     const validateStatus = status => status !== 200
-    await fetch('https://checkip.amazonaws.com', { validateStatus })
+    await fetch('http://127.0.0.1:' + port, { validateStatus })
     t.fail('Should have given error')
   } catch (err) {
     t.ok(err.response)

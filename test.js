@@ -26,23 +26,16 @@ test('timeout response', async function (t) {
   }
 })
 
-test.skip('timeout body', async function (t) {
-  try {
-    const response = await fetch('https://http.cat/401', { timeout: 3000 })
-    await sleep(3000)
-    await response.blob()
-    t.fail('Should have given error')
-  } catch (error) {
-    t.is(error.name, 'TimeoutError')
-  }
-})
-
 test('retry', async function (t) {
+  const port = await createServer(t, (req, res) => {
+    setTimeout(() => { res.writeHead(200).end() }, 30000)
+  })
+
   const started = Date.now()
 
   try {
     const retry = { max: 3, delay: 1000, strategy: 'linear' }
-    await fetch('https://checkip.amazonaws.com', { timeout: 1, retry })
+    await fetch('http://127.0.0.1:' + port, { timeout: 1, retry })
     t.fail('Should have given error')
   } catch (error) {
     t.is(error.name, 'TimeoutError')
@@ -283,10 +276,6 @@ test('user controller on the edge of a failing response', async function (t) {
 function isAround (delay, real, precision = 150) {
   const diff = Math.abs(delay - real)
   return diff <= precision
-}
-
-function sleep (ms) {
-  return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 async function createServer (t, onrequest) {

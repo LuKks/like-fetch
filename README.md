@@ -69,6 +69,9 @@ const response = await fetch('https://example.com', { requestType: 'json', body:
 // Sets the 'Content-Type' header to 'application/x-www-form-urlencoded'
 // And if body is not undefined then it stringifes URLSearchParams using the body
 const response = await fetch('https://example.com', { requestType: 'url', body: { username: 'test' } })
+
+// Sets the 'Content-Type' header to 'text/plain'
+const response = await fetch('https://example.com', { requestType: 'text', body: { username: 'test' } })
 ```
 
 ## Response types

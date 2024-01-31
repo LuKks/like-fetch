@@ -72,6 +72,9 @@ const response = await fetch('https://example.com', { requestType: 'url', body: 
 
 // Sets the 'Content-Type' header to 'text/plain'
 const response = await fetch('https://example.com', { requestType: 'text', body: { username: 'test' } })
+
+// Sets the 'Content-Type' header to 'multipart/form-data; boundary=...'
+const response = await fetch('https://example.com', { requestType: 'form', body: new FormData() })
 ```
 
 ## Response types

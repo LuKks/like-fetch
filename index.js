@@ -94,6 +94,11 @@ function handleRequestTypes (opts, requestType) {
     return
   }
 
+  if (requestType === 'form') {
+    if (!opts.headers['content-type']) opts.headers['content-type'] = 'multipart/form-data; boundary=' + opts.body.getBoundary()
+    return
+  }
+
   throw new Error('requestType not supported (' + requestType + ')')
 }
 

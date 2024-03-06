@@ -109,6 +109,9 @@ function handleResponseTypes (opts, responseType) {
   if (responseType === 'json') {
     if (!opts.headers.accept) opts.headers.accept = 'application/json'
     return
+  } else if (responseType === 'file') {
+    if (!opts.headers.accept) opts.headers.accept = 'application/octet-stream'
+    return
   } else if (responseType === 'text') {
     return
   }

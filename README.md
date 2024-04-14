@@ -21,6 +21,7 @@ const body = await response.text()
 
 // Using some features
 const ip = await fetch('https://example.com', {
+  query: { limit: 5 }, // It's similar to URLSearchParams for query strings
   timeout: 5000, // Uses AbortController, signal, etc
   retry: { max: 3 }, // This retry object is passed to like-retry
   validateStatus: 'ok', // Throw if status is not correct

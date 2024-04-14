@@ -1,10 +1,13 @@
 const cfetch = require('cross-fetch')
 const retry = require('like-retry')
 
+const FetchURLSearchParams = require('./lib/url-search-params.js')
+
 module.exports = fetch
 
 function fetch (url, options = {}) {
   const opts = Object.assign({}, options)
+  const query = remove(opts, 'query')
   const retryOptions = remove(opts, 'retry')
   const timeout = remove(opts, 'timeout')
   const validateStatus = remove(opts, 'validateStatus')
@@ -15,6 +18,7 @@ function fetch (url, options = {}) {
   handleRequestTypes(opts, requestType)
   handleResponseTypes(opts, responseType)
 
+  const urlWithQuery = handleURL(url, query)
   let timeoutSignal = handleTimeout(opts, timeout)
 
   const promise = new Promise(callback)
@@ -25,7 +29,7 @@ function fetch (url, options = {}) {
     for await (const backoff of retry(retryOptions)) {
       try {
         const signals = AbortSignal.any([signal, timeoutSignal, promise.controller.signal].filter(s => s))
-        const response = await cfetch(url, { ...opts, signal: signals })
+        const response = await cfetch(urlWithQuery, { ...opts, signal: signals })
 
         handleValidateStatus(response, validateStatus)
 
@@ -184,4 +188,46 @@ function remove (obj, key) {
   const value = obj[key]
   delete obj[key]
   return value
+}
+
+function handleURL (url, query) {
+  const u = new URL(url)
+  const searchParams = new FetchURLSearchParams()
+
+  if (u.searchParams.size > 0) {
+    for (const [key, value] of u.searchParams) {
+      // For simplicity we don't convert existing query array values if any
+      // Axios also doesn't seem to do it so it's fine
+      searchParams.append(key, value)
+    }
+  }
+
+  const params = objectToSearchParams(query, searchParams)
+  const search = params.size > 0 ? ('?' + params.toString()) : ''
+
+  return u.origin + u.pathname + search + u.hash
+}
+
+function objectToSearchParams (query, params) {
+  if (!query) return params
+
+  for (const key in query) {
+    paramsAppend(params, key, query[key])
+  }
+
+  return params
+}
+
+function paramsAppend (params, key, value) {
+  if (value === undefined || value === null) return
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      // We add brackets by default because some random external backends need it
+      paramsAppend(params, key + '[]', item)
+    }
+    return
+  }
+
+  params.append(key, value)
 }

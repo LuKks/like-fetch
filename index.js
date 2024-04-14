@@ -196,8 +196,7 @@ function handleURL (url, query) {
 
   if (u.searchParams.size > 0) {
     for (const [key, value] of u.searchParams) {
-      // For simplicity we don't convert existing query array values if any
-      // Axios also doesn't seem to do it so it's fine
+      // For simplicity, we don't convert existing query array values if any
       searchParams.append(key, value)
     }
   }
@@ -223,7 +222,7 @@ function paramsAppend (params, key, value) {
 
   if (Array.isArray(value)) {
     for (const item of value) {
-      // We add brackets by default because some random external backends need it
+      // We add brackets because some random external backends need it
       paramsAppend(params, key + '[]', item)
     }
     return

@@ -1,6 +1,7 @@
 const test = require('brittle')
 const fetch = require('./')
 const http = require('http')
+const express = require('express')
 
 test('basic', async function (t) {
   const port = await createServer(t, (req, res) => { res.writeHead(200).end('hello') })
@@ -113,6 +114,125 @@ test('response types', async function (t) {
   const body2 = await fetch('http://127.0.0.1:' + port, { responseType: 'text' })
   t.is(typeof body2, 'string')
   t.ok(body2.indexOf('"name":"lucas"') > -1)
+})
+
+test('query string and object', async function (t) {
+  t.plan(2)
+
+  const app = express()
+
+  const query = {
+    undef: undefined,
+    nool: null,
+    buf: Buffer.from('hi'),
+    empty: '',
+    msg: 'Hello World!',
+    zero: 0,
+    num: 1337,
+    flag: true,
+    debug: false,
+    something: 'a',
+    '>~some, + (thing) : el$e!': '>~some, + (thing) : el$e!',
+    items: ['a,b', 'c', null, undefined, 'd']
+  }
+
+  app.get('/', function (req, res) {
+    // Note: Don't depend on this raw query string as it could change in the future due encodings, arrays, etc
+    // Any flexible backend will get you the expected object
+    t.is(req.url, '/?something=b%21&else=a%25b%25c&items=x1%2Cx2&items=x3&buf=hi&empty=&msg=Hello+World%21&zero=0&num=1337&flag=true&debug=false&something=a&%3E%7Esome%2C+%2B+%28thing%29+%3A+el%24e%21=%3E%7Esome%2C+%2B+%28thing%29+%3A+el%24e%21&items[]=a%2Cb&items[]=c&items[]=d')
+
+    t.alike(req.query, {
+      something: ['b!', 'a'],
+      '>~some, + (thing) : el$e!': '>~some, + (thing) : el$e!',
+      else: 'a%b%c',
+      items: ['x1,x2', 'x3', 'a,b', 'c', 'd'],
+      buf: 'hi',
+      empty: '',
+      msg: 'Hello World!',
+      zero: '0',
+      num: '1337',
+      flag: 'true',
+      debug: 'false'
+    })
+
+    res.sendStatus(200)
+  })
+
+  const port = await createServer(t, app)
+
+  const search = '?something=b!&else=a%b%c&items=x1,x2&items=x3#abc'
+
+  await fetch('http://127.0.0.1:' + port + '/' + search, { query })
+})
+
+test('query object', async function (t) {
+  t.plan(2)
+
+  const app = express()
+
+  const query = {
+    undef: undefined,
+    nool: null,
+    buf: Buffer.from('hi'),
+    empty: '',
+    msg: 'Hello World!',
+    zero: 0,
+    num: 1337,
+    flag: true,
+    debug: false,
+    something: 'a',
+    '>~some, + (thing) : el$e!': '>~some, + (thing) : el$e!',
+    items: ['a,b', 'c', null, undefined, 'd']
+  }
+
+  app.get('/', function (req, res) {
+    // Note: Don't depend on this raw query string as it could change in the future
+    t.is(req.url, '/?buf=hi&empty=&msg=Hello+World%21&zero=0&num=1337&flag=true&debug=false&something=a&%3E%7Esome%2C+%2B+%28thing%29+%3A+el%24e%21=%3E%7Esome%2C+%2B+%28thing%29+%3A+el%24e%21&items[]=a%2Cb&items[]=c&items[]=d')
+
+    t.alike(req.query, {
+      something: 'a',
+      '>~some, + (thing) : el$e!': '>~some, + (thing) : el$e!',
+      items: ['a,b', 'c', 'd'],
+      buf: 'hi',
+      empty: '',
+      msg: 'Hello World!',
+      zero: '0',
+      num: '1337',
+      flag: 'true',
+      debug: 'false'
+    })
+
+    res.sendStatus(200)
+  })
+
+  const port = await createServer(t, app)
+
+  await fetch('http://127.0.0.1:' + port, { query })
+})
+
+test('query string', async function (t) {
+  t.plan(2)
+
+  const app = express()
+
+  app.get('/', function (req, res) {
+    // Note: Don't depend on this raw query string as it could change in the future
+    t.is(req.url, '/?something=b%21&else=a%25b%25c&items=x1%2Cx2&items=x3')
+
+    t.alike(req.query, {
+      something: 'b!',
+      else: 'a%b%c',
+      items: ['x1,x2', 'x3']
+    })
+
+    res.sendStatus(200)
+  })
+
+  const port = await createServer(t, app)
+
+  const search = '?something=b!&else=a%b%c&items=x1,x2&items=x3#abc'
+
+  await fetch('http://127.0.0.1:' + port + '/' + search)
 })
 
 test('controller manual abort should ignore retry', async function (t) {

@@ -1,6 +1,8 @@
 const cfetch = require('cross-fetch')
 const retry = require('like-retry')
 
+const LikeFetchError = require('./lib/error.js')
+const getSignalError = require('./lib/get-signal-error.js')
 const FetchURLSearchParams = require('./lib/url-search-params.js')
 
 module.exports = fetch
@@ -155,32 +157,6 @@ function customError (status, response) {
   }
 
   return new LikeFetchError(message, undefined, response)
-}
-
-class LikeFetchError extends Error {
-  constructor (msg, code, response) {
-    super(msg)
-    this.code = code
-
-    this.response = response
-    this.body = undefined
-  }
-
-  get name () {
-    return 'LikeFetchError'
-  }
-}
-
-function getSignalError (signal) {
-  if (!signal || !signal.aborted) return null
-
-  try {
-    signal.throwIfAborted()
-  } catch (err) {
-    return err
-  }
-
-  return null
 }
 
 // It avoids passing non-standard args to native fetch() like timeout, validateStatus, etc

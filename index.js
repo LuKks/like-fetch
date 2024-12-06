@@ -1,4 +1,4 @@
-const cfetch = require('cross-fetch')
+const cfetch = isCloudflareWorker() ? global.fetch : require('cross-fetch')
 const retry = require('like-retry')
 
 const LikeFetchError = require('./lib/error.js')
@@ -205,4 +205,8 @@ function paramsAppend (params, key, value) {
   }
 
   params.append(key, value)
+}
+
+function isCloudflareWorker () {
+  return typeof WebSocketPair === 'function'
 }

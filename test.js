@@ -3,6 +3,8 @@ const fetch = require('./')
 const http = require('http')
 const express = require('express')
 
+const NODE_MAJOR_VERSION = Number(process.versions.node.split('.')[0])
+
 test('basic', async function (t) {
   const port = await createServer(t, (req, res) => { res.writeHead(200).end('hello') })
 
@@ -11,7 +13,7 @@ test('basic', async function (t) {
   t.is(body, 'hello')
 })
 
-test('timeout response', async function (t) {
+test('timeout response', { skip: NODE_MAJOR_VERSION < 20 }, async function (t) {
   const port = await createServer(t, (req, res) => {
     const id = setTimeout(() => {}, 30000)
     res.on('close', () => clearTimeout(id))
@@ -25,7 +27,7 @@ test('timeout response', async function (t) {
   }
 })
 
-test('retry', async function (t) {
+test('retry', { skip: NODE_MAJOR_VERSION < 20 }, async function (t) {
   const port = await createServer(t, (req, res) => {
     const id = setTimeout(() => {}, 30000)
     res.on('close', () => clearTimeout(id))
@@ -235,7 +237,7 @@ test('query string', async function (t) {
   await fetch('http://127.0.0.1:' + port + '/' + search)
 })
 
-test('controller manual abort should ignore retry', async function (t) {
+test('controller manual abort should ignore retry', { skip: NODE_MAJOR_VERSION < 20 }, async function (t) {
   const port = await createServer(t, (req, res) => { res.writeHead(200).end() })
 
   const started = Date.now()
@@ -252,7 +254,7 @@ test('controller manual abort should ignore retry', async function (t) {
   t.ok(isAround(Date.now() - started, 0))
 })
 
-test('controller changes at every retry', async function (t) {
+test('controller changes at every retry', { skip: NODE_MAJOR_VERSION < 20 }, async function (t) {
   const port = await createServer(t, (req, res) => {
     const id = setTimeout(() => {}, 30000)
     res.on('close', () => clearTimeout(id))
@@ -276,7 +278,7 @@ test('controller changes at every retry', async function (t) {
   t.ok(isAround(Date.now() - started, 0))
 })
 
-test('timeout + custom signal with controller should be ok', async function (t) {
+test('timeout + custom signal with controller should be ok', { skip: NODE_MAJOR_VERSION < 20 }, async function (t) {
   const port = await createServer(t, (req, res) => {
     const id = setTimeout(() => {}, 30000)
     res.on('close', () => clearTimeout(id))
@@ -301,7 +303,7 @@ test('timeout + custom signal with controller should be ok', async function (t) 
   t.ok(isAround(Date.now() - started, 0))
 })
 
-test('timeout + custom controller without passing signal should be ok', async function (t) {
+test('timeout + custom controller without passing signal should be ok', { skip: NODE_MAJOR_VERSION < 20 }, async function (t) {
   const port = await createServer(t, (req, res) => {
     const id = setTimeout(() => {}, 30000)
     res.on('close', () => clearTimeout(id))

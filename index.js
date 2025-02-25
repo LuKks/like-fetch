@@ -30,7 +30,7 @@ function fetch (url, options = {}) {
   async function callback (resolve, reject) {
     for await (const backoff of retry(retryOptions)) {
       try {
-        const signals = AbortSignal.any([signal, timeoutSignal, promise.controller.signal].filter(s => s))
+        const signals = AbortSignal.any ? AbortSignal.any([signal, timeoutSignal, promise.controller.signal].filter(Boolean)) : signal
         const response = await cfetch(urlWithQuery, { ...opts, signal: signals })
 
         handleValidateStatus(response, validateStatus)

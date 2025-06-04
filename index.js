@@ -1,13 +1,10 @@
-const cfetch = isCloudflareWorker() ? global.fetch : require('cross-fetch')
 const retry = require('like-retry')
 
 const LikeFetchError = require('./lib/error.js')
 const getSignalError = require('./lib/get-signal-error.js')
 const FetchURLSearchParams = require('./lib/url-search-params.js')
 
-module.exports = fetch
-
-function fetch (url, options = {}) {
+module.exports = function fetch (cfetch, url, options = {}) {
   const opts = Object.assign({}, options)
   const query = remove(opts, 'query')
   const retryOptions = remove(opts, 'retry')
@@ -59,6 +56,10 @@ function fetch (url, options = {}) {
         if (error.name === 'AbortError' || error.name === 'LikeFetchError') {
           reject(error)
           return
+        }
+
+        if (!error.code && error.cause && error.cause.code) {
+          error.code = error.cause.code
         }
 
         try {
@@ -205,8 +206,4 @@ function paramsAppend (params, key, value) {
   }
 
   params.append(key, value)
-}
-
-function isCloudflareWorker () {
-  return typeof WebSocketPair === 'function'
 }

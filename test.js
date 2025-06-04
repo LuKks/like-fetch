@@ -1,5 +1,6 @@
 const test = require('brittle')
-const fetch = require('./')
+const fetch = require('./node.js')
+const fetch2 = require('./browser.js')
 const http = require('http')
 const express = require('express')
 
@@ -327,12 +328,20 @@ test('timeout + custom controller without passing signal should be ok', { skip: 
   t.ok(isAround(Date.now() - started, 0))
 })
 
-test('could not send the request', async function (t) {
+test('could not send the request - node', async function (t) {
   try {
-    await fetch('http://127.0.0.1:123')
+    await fetch('http://127.0.0.1:1234')
     t.fail('Should have given error')
   } catch (err) {
-    t.is(err.name, 'FetchError') // Native Fetch error
+    t.is(err.code, 'ECONNREFUSED')
+  }
+})
+
+test('could not send the request - browser', async function (t) {
+  try {
+    await fetch2('http://127.0.0.1:1234')
+    t.fail('Should have given error')
+  } catch (err) {
     t.is(err.code, 'ECONNREFUSED')
   }
 })

@@ -84,6 +84,15 @@ function handleRequestTypes (opts, requestType) {
   if (!requestType) return
   if (!opts.headers) opts.headers = {}
 
+  if (isFormData(opts.body)) {
+    // We leave fetch to complete it
+    if (opts.headers['content-type']) {
+      delete opts.headers['content-type']
+    }
+
+    return
+  }
+
   if (requestType === 'json') {
     if (!opts.headers['content-type']) opts.headers['content-type'] = 'application/json'
     if (opts.body !== undefined) opts.body = JSON.stringify(opts.body)
@@ -206,4 +215,16 @@ function paramsAppend (params, key, value) {
   }
 
   params.append(key, value)
+}
+
+function isFormData (input) {
+  if (input instanceof FormData) {
+    return true
+  }
+
+  if (typeof input === 'object' && input && input.constructor && input.constructor.name === 'FormData') {
+    return true
+  }
+
+  return false
 }

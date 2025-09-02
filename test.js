@@ -14,6 +14,28 @@ test('basic', async function (t) {
   t.is(body, 'hello')
 })
 
+test('create', async function (t) {
+  t.plan(2)
+
+  const port = await createServer(t, (req, res) => {
+    t.is(req.headers['x-custom'], 'abc')
+
+    res.writeHead(200).end(JSON.stringify({ msg: 'hello' }))
+  })
+
+  const api = fetch.create('http://127.0.0.1:' + port, {
+    headers: {
+      'x-custom': 'abc'
+    },
+    requestType: 'json',
+    responseType: 'json'
+  })
+
+  const data = await api('/')
+
+  t.alike(data, { msg: 'hello' })
+})
+
 test('timeout response', { skip: NODE_MAJOR_VERSION < 20 }, async function (t) {
   const port = await createServer(t, (req, res) => {
     const id = setTimeout(() => {}, 30000)

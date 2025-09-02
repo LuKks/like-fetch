@@ -1,6 +1,6 @@
 {
   "name": "like-fetch",
-  "version": "2.3.3",
+  "version": "2.4.0",
   "description": "Fetch with added features: timeout, retry, status validation, simplified response, etc",
   "main": "node.js",
   "browser": "browser.js",
